@@ -920,6 +920,27 @@ async function subHtml(request) {
 
 export default {
 	async fetch(request, env) {
+		// Direct Mihomo output for this account's configured single VLESS endpoint.
+		const directURL = new URL(request.url);
+		if (env.TOKEN && directURL.pathname === '/' + env.TOKEN &&
+			(directURL.searchParams.get('format') === 'clash' || /clash|mihomo|meta/i.test(request.headers.get('user-agent') || ''))) {
+			if (!env.HOST || !env.UUID) return new Response('Missing HOST or UUID', {status: 503});
+			const q = JSON.stringify;
+			const yaml = [
+				'mixed-port: 7890', 'allow-lan: false', 'mode: rule', 'log-level: warning',
+				'proxies:', '  - name: Cloudflare-TCP', '    type: vless',
+				'    server: ' + q(env.HOST), '    port: 443', '    uuid: ' + q(env.UUID),
+				'    tls: true', '    servername: ' + q(env.HOST), '    skip-cert-verify: false',
+				'    udp: false', '    network: ws', '    ws-opts:', '      path: ' + q((env.PATH || '/ws').split('?')[0]),
+				'      headers:', '        Host: ' + q(env.HOST),
+				'proxy-groups:', '  - name: Cloudflare', '    type: select',
+				'    proxies:', '      - Cloudflare-TCP', '      - DIRECT',
+				'rules:', '  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve',
+				'  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve', '  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve',
+				'  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve', '  - GEOIP,CN,DIRECT', '  - MATCH,Cloudflare', ''
+			].join('\n');
+			return new Response(yaml, {headers: {'content-type': 'text/yaml;charset=utf-8', 'cache-control': 'no-store'}});
+		}
 		if (env.TOKEN) 快速订阅访问入口 = await 整理(env.TOKEN);
 		BotToken = env.TGTOKEN || BotToken;
 		ChatID = env.TGID || ChatID;
